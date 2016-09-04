@@ -1,34 +1,40 @@
-CREATE SCHEMA cron
+CREATE SCHEMA cron;
 
-	CREATE TABLE jobs (
-		job_name text not null,
-		cron_string not null,
-		query text not null,
-		connection_string text not null,
-		PRIMARY KEY (job_name)
-	)
+CREATE SEQUENCE cron.jobid_seq;
+CREATE SEQUENCE cron.runid_seq;
 
-	CREATE TABLE results (
-		id bigint primary key default nextval('task_id_sequence'),
-		job_name text not null,
-		start_time timestamptz,
-		end_time timestamptz,
-		status int not null,
-		output text
-	)
+CREATE TABLE cron.job (
+	jobid bigserial primary key,
+	schedule text not null,
+	command text not null,
+	nodename text not null default 'localhost',
+	nodeport int not null default inet_server_port(),
+	database text not null default current_database(),
+	username text not null default current_user
+);
 
-	CREATE SEQUENCE task_id_sequence NO CYCLE;
+CREATE TABLE cron.result (
+	runid bigserial primary key,
+	jobid bigint not null,
+	starttime timestamptz,
+	endtime timestamptz,
+	status int not null,
+	output text,
+	FOREIGN KEY (jobid) REFERENCES cron.job (jobid)
+);
 
-CREATE FUNCTION cron.schedule(text,text,text,text)
-    RETURNS text
+/*
+CREATE FUNCTION cron.schedule(schedule text, command text)
+    RETURNS bigint
     LANGUAGE C STRICT
     AS 'MODULE_PATHNAME', $$pg_cron_schedule$$;
-COMMENT ON FUNCTION cron.schedule(text,text,text,text)
+COMMENT ON FUNCTION cron.schedule(text,text)
     IS 'schedule a pg_cron job';
 
-CREATE FUNCTION cron.unschedule(text)
-    RETURNS text
+CREATE FUNCTION cron.unschedule(job_id bigint)
+    RETURNS bool
     LANGUAGE C STRICT
     AS 'MODULE_PATHNAME', $$pg_cron_schedule$$;
-COMMENT ON FUNCTION cron.unschedule(text)
+COMMENT ON FUNCTION cron.unschedule(bigint)
     IS 'unschedule a pg_cron job';
+*/
